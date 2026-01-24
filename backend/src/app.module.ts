@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { TipsModule } from './tips/tips.module';
 import { StellarModule } from './stellar/stellar.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SearchModule } from './search/search.module';
 import { PlaylistsModule } from './playlists/playlists.module';
 
 @Module({
@@ -36,6 +37,7 @@ import { PlaylistsModule } from './playlists/playlists.module';
     TipsModule,
     StellarModule,
     NotificationsModule,
+    SearchModule,
     PlaylistsModule,
   ],
   controllers: [],
