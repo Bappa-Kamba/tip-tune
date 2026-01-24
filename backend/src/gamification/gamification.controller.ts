@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Badge } from './entities/badge.entity';
 import { UserBadge } from './entities/user-badge.entity';
 import { Repository } from 'typeorm';
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming this exists
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('gamification')
 export class GamificationController {
@@ -21,6 +21,7 @@ export class GamificationController {
         return this.badgeRepo.find({ order: { category: 'ASC', tier: 'ASC' } });
     }
 
+    @UseGuards(JwtAuthGuard)
     @Get('user/:userId')
     async getUserBadges(@Param('userId') userId: string) {
         return this.userBadgeRepo.find({

@@ -124,19 +124,20 @@ export class GamificationService implements OnModuleInit {
         }
 
         // 2. Artist Badges
-        const artist = await this.artistRepo.findOne({ where: { id: artistId }, relations: ['user'] });
-        if (artist && artist.user) {
-            const tipsReceived = await this.tipRepo.count({
-                where: {
-                    artistId: artistId, // Tip.artistId matches Artist.id
-                    status: TipStatus.VERIFIED
-                }
-            });
+        // artistId in payload is User UUID (as per context)
+        // We count tips where the related Artist has this User ID
+        const tipsReceived = await this.tipRepo.count({
+            where: {
+                artist: { user: { id: artistId } },
+                status: TipStatus.VERIFIED
+            },
+            relations: ['artist', 'artist.user']
+        });
 
-            if (tipsReceived >= 1) await this.awardBadge(artist.user.id, 'First Tip Received');
-            if (tipsReceived >= 100) await this.awardBadge(artist.user.id, '100 Tips Received');
-        }
+        if (tipsReceived >= 1) await this.awardBadge(artistId, 'First Tip Received');
+        if (tipsReceived >= 100) await this.awardBadge(artistId, '100 Tips Received');
     }
+
 
 
     @OnEvent('track.uploaded', { async: true })
@@ -199,16 +200,16 @@ export class GamificationService implements OnModuleInit {
         const existing = await this.userBadgeRepo.findOne({ where: { userId, badgeId: badge.id } });
         if (existing) return;
 
-        const userBadge = this.userBadgeRepo.create({
-            userId,
-            badgeId: badge.id,
-        });
-        await this.userBadgeRepo.save(userBadge);
-
-        this.logger.log(`Awarded badge ${badgeName} to user ${userId}`);
-
-        // NFT Minting
         try {
+            const userBadge = this.userBadgeRepo.create({
+                userId,
+                badgeId: badge.id,
+            });
+            await this.userBadgeRepo.save(userBadge);
+
+            this.logger.log(`Awarded badge ${badgeName} to user ${userId}`);
+
+            // NFT Minting
             if (process.env.ENABLE_NFT_MINTING === 'true') {
                 const txHash = await this.stellarService.mintBadge(userId, badge);
                 if (txHash) {
@@ -216,11 +217,10 @@ export class GamificationService implements OnModuleInit {
                     await this.userBadgeRepo.save(userBadge);
                 }
             }
-        } catch (e) {
-            this.logger.error(`Failed to mint NFT for badge ${badgeName}: ${e.message}`);
+        } catch (error) {
+            // Ignore unique constraint violation (race condition)
+            if (error.code === '23505') return; // Postgres unique_violation
+            this.logger.error(`Failed to award badge ${badgeName}: ${error.message}`);
         }
-
-        // Notifications (Mocked call as I don't have the service interface details yet)
-        // this.notificationsService.sendNotification(userId, `You earned a badge: ${badgeName}`);
     }
 }

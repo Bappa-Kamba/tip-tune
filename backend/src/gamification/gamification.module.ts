@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GamificationService } from './gamification.service';
 import { Badge } from './entities/badge.entity';
 import { UserBadge } from './entities/user-badge.entity';
-import { Tip } from '../tips/entities/tip.entity'; // Confirm path
+import { Tip } from '../tips/entities/tip.entity';
 import { Track } from '../tracks/entities/track.entity';
 import { Artist } from '../artists/entities/artist.entity';
 import { User } from '../users/entities/user.entity';
