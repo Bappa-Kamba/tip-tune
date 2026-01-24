@@ -11,6 +11,7 @@ import { StellarModule } from './stellar/stellar.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
 import { PlaylistsModule } from './playlists/playlists.module';
+import { ActivitiesModule } from './activities/activities.module';
 import { FollowsModule } from './follows/follows.module';
 
 @Module({
@@ -40,6 +41,7 @@ import { FollowsModule } from './follows/follows.module';
     NotificationsModule,
     SearchModule,
     PlaylistsModule,
+    ActivitiesModule,
     FollowsModule,
   ],
   controllers: [],

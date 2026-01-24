@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Track } from './entities/track.entity';
 import { CreateTrackDto } from './dto/create-track.dto';
 import { TrackFilterDto } from './dto/pagination.dto';
 import { StorageService } from '../storage/storage.service';
+import { ActivitiesService } from '../activities/activities.service';
 
 interface PaginatedResult<T> {
   data: T[];
@@ -22,6 +23,8 @@ export class TracksService {
     @InjectRepository(Track)
     private tracksRepository: Repository<Track>,
     private storageService: StorageService,
+    @Inject(forwardRef(() => ActivitiesService))
+    private activitiesService: ActivitiesService,
   ) {}
 
   async create(createTrackDto: CreateTrackDto, file?: Express.Multer.File): Promise<Track> {
@@ -59,6 +62,24 @@ export class TracksService {
 
       const savedTrack = await this.tracksRepository.save(track);
       this.logger.log(`Track created successfully: ${savedTrack.id}`);
+      
+      // Track activity for new track
+      if (savedTrack.artistId) {
+        try {
+          await this.activitiesService.trackNewTrack(
+            savedTrack.artistId,
+            savedTrack.id,
+            {
+              trackTitle: savedTrack.title,
+              genre: savedTrack.genre,
+              album: savedTrack.album,
+            },
+          );
+        } catch (error) {
+          // Log but don't fail track creation if activity tracking fails
+          this.logger.warn(`Failed to track activity for new track: ${error.message}`);
+        }
+      }
       
       return savedTrack;
     } catch (error) {

@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +15,7 @@ import { PaginationQueryDto, PaginatedResponseDto } from './pagination.dto';
 import { StellarService } from '../stellar/stellar.service';
 import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ActivitiesService } from '../activities/activities.service';
 
 @Injectable()
 export class TipsService {
@@ -24,6 +27,8 @@ export class TipsService {
     private readonly stellarService: StellarService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => ActivitiesService))
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async create(userId: string, createTipDto: CreateTipDto): Promise<Tip> {
@@ -101,6 +106,28 @@ export class TipsService {
 
     // Emit WebSocket notification
     this.notificationsService.notifyArtistOfTip(artistId, savedTip);
+
+    // Track activities
+    try {
+      // Track tip sent activity for the sender
+      await this.activitiesService.trackTipSent(userId, savedTip.id, {
+        amount: savedTip.amount,
+        toArtistId: artistId,
+        trackId: trackId,
+        message: message,
+      });
+
+      // Track tip received activity for the artist
+      await this.activitiesService.trackTipReceived(artistId, savedTip.id, {
+        amount: savedTip.amount,
+        fromUserId: userId,
+        trackId: trackId,
+        message: message,
+      });
+    } catch (error) {
+      // Log but don't fail tip creation if activity tracking fails
+      this.logger.warn(`Failed to track activities for tip: ${error.message}`);
+    }
     
     return savedTip;
   }
