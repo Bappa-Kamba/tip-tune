@@ -21,6 +21,7 @@ import { ScheduledReleasesModule } from './scheduled-releases/scheduled-releases
 import { LeaderboardsModule } from './leaderboards/leaderboards.module';
 import { ReportsModule } from './reports/reports.module';
 import { GoalsModule } from './goals/goals.module';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { GoalsModule } from './goals/goals.module';
     LeaderboardsModule,
     ReportsModule,
     GoalsModule,
+    VerificationModule,
   ],
   controllers: [],
   providers: [],
