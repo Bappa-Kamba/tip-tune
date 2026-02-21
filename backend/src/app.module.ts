@@ -21,6 +21,8 @@ import { ScheduledReleasesModule } from './scheduled-releases/scheduled-releases
 import { LeaderboardsModule } from './leaderboards/leaderboards.module';
 import { ReportsModule } from './reports/reports.module';
 import { GoalsModule } from './goals/goals.module';
+import { CommentsModule } from './comments/comments.module';
+import { CollaborationModule } from './collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -36,7 +38,7 @@ import { GoalsModule } from './goals/goals.module';
       password: process.env.DB_PASSWORD || 'password',
       database: process.env.DB_NAME || 'tiptune',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: false, // Use migrations instead
       logging: process.env.NODE_ENV === 'development',
     }),
     ScheduleModule.forRoot(),
@@ -58,6 +60,9 @@ import { GoalsModule } from './goals/goals.module';
     LeaderboardsModule,
     ReportsModule,
     GoalsModule,
+    GamificationModule,
+    CommentsModule,
+    CollaborationModule,
   ],
   controllers: [],
   providers: [],
