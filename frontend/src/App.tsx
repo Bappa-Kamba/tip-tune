@@ -13,6 +13,7 @@ import { ArtistOnboarding } from "./components/ArtistOnboarding";
 import SearchPage from "./pages/SearchPage";
 
 import AnalyticsDashboard from "./components/analytics/AnalyticsDashboard";
+import InstallPrompt from "./components/InstallPrompt";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
 
         <MusicPlayer tracks={tracks} />
       </main>
+      <InstallPrompt />
     </div>
   );
 }
