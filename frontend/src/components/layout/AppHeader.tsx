@@ -8,6 +8,7 @@ const AppHeader: React.FC = () => {
 
   const navItems = [
     { label: 'Home', to: '/' },
+    { label: 'Explore', to: '/explore' },
     { label: 'Leaderboards', to: '/leaderboards' },
     { label: 'Dashboard', to: '/dashboard' },
     { label: 'Settings', to: '/settings'},
