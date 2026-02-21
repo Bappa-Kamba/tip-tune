@@ -9,6 +9,8 @@ import AppHeader from "./components/layout/AppHeader";
 import MusicPlayer, { tracks } from "./components/player/MusicPlayer";
 import { ArtistOnboarding } from "./components/ArtistOnboarding";
 
+import AnalyticsDashboard from "./components/analytics/AnalyticsDashboard";
+
 function App() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-deep-slate">
@@ -20,6 +22,7 @@ function App() {
           <Route path="/leaderboards" element={<LeaderboardsPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/analytics" element={<AnalyticsDashboard />} />
           {/* <Route path="/music-player" element={<MusicPlayer />} /> */}
           <Route path="*" element={<NotFoundPage />} />
           <Route path="/onboarding" element={<ArtistOnboarding />} />
