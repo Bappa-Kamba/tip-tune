@@ -117,9 +117,6 @@ export class TracksService {
     }
   }
 
-  // After create method, actually let's put it before return savedTrack
-  // Re-writing the chunk to include the end of create method
-
   async findAll(filter: TrackFilterDto): Promise<PaginatedResult<Track>> {
     const {
       page = 1,

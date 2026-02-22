@@ -6,10 +6,11 @@ import { LicensingService } from './licensing.service';
 import { LicensingController } from './licensing.controller';
 import { LicensingMailService } from './licensing-mail.service';
 import { NotificationsModule } from "@/notifications/notifications.module";
+import { Track } from "@/tracks/entities/track.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TrackLicense, LicenseRequest]),
+    TypeOrmModule.forFeature([TrackLicense, LicenseRequest, Track]),
     NotificationsModule,
   ],
   controllers: [LicensingController],

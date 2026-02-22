@@ -102,6 +102,15 @@ export class LicensingService {
       );
     }
 
+     // Validate track exists before persisting
+    const track = await this.trackRepo.findOne({
+      where: { id: dto.trackId },
+      select: ["artistId"],
+    });
+    if (!track) {
+      throw new NotFoundException(`Track ${dto.trackId} not found.`);
+    }
+
     const request = this.licenseRequestRepo.create({
       ...dto,
       requesterId,
@@ -109,20 +118,16 @@ export class LicensingService {
     });
     const saved = await this.licenseRequestRepo.save(request);
 
-    const track = await this.trackRepo.findOne({
-      where: {
-        id: dto.trackId,
-      },
-      select: ["artistId"],
-    });
 
-    await this.notificationsService.create({
-      userId: track.artistId,
-      type: "LICENSE_REQUEST",
-      title: "New License Request",
-      message: `A user has requested a license for your track.`,
-      data: { requestId: saved.id, trackId: saved.trackId },
-    });
+    if (track.artistId) {
+      await this.notificationsService.create({
+        userId: track.artistId,
+        type: "LICENSE_REQUEST",
+        title: "New License Request",
+        message: `A user has requested a license for your track.`,
+        data: { requestId: saved.id, trackId: saved.trackId },
+      });
+    }
 
     // Notify artist (fire-and-forget)
     this.mailService

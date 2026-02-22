@@ -26,8 +26,8 @@ export class TrackLicense {
   @Column({ name: "track_id" })
   trackId: string;
 
-  @OneToOne(() => Track, (track) => track.id, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "trackId" })
+  @OneToOne(() => Track, (track) => track.license, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "track_id" })
   track: Track;
 
   @Column({

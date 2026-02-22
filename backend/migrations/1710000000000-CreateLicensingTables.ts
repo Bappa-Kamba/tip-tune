@@ -2,12 +2,18 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class CreateLicensingTables1710000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // 1. Create Track Licenses Table
+    await queryRunner.query(`
+      CREATE TYPE "license_type_enum" AS ENUM ('all_rights_reserved', 'creative_commons', 'commercial', 'sync')
+    `);
+    await queryRunner.query(`
+      CREATE TYPE "license_request_status_enum" AS ENUM ('pending', 'approved', 'rejected')
+    `);
+    // Create Track Licenses Table
     await queryRunner.query(`
       CREATE TABLE "track_licenses" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "track_id" uuid NOT NULL,
-        "licenseType" character varying NOT NULL DEFAULT 'all_rights_reserved',
+        "licenseType" license_type_enum NOT NULL DEFAULT 'all_rights_reserved',
         "allowRemix" boolean NOT NULL DEFAULT false,
         "allowCommercialUse" boolean NOT NULL DEFAULT false,
         "allowDownload" boolean NOT NULL DEFAULT false,
@@ -23,14 +29,14 @@ export class CreateLicensingTables1710000000000 implements MigrationInterface {
       )
     `);
 
-    // 2. Create License Requests Table
+    // Create License Requests Table
     await queryRunner.query(`
       CREATE TABLE "license_requests" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "track_id" uuid NOT NULL,
         "requester_id" uuid NOT NULL,
         "intendedUse" text NOT NULL,
-        "status" character varying NOT NULL DEFAULT 'pending',
+        "status" license_request_status_enum NOT NULL DEFAULT 'pending',
         "responseMessage" text,
         "respondedAt" TIMESTAMP,
         "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
