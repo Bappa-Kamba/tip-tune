@@ -6,27 +6,28 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TrackLicense, LicenseType } from './entities/track-license.entity';
-import {
-  LicenseRequest,
-  LicenseRequestStatus,
-} from './entities/license-request.entity';
+import { TrackLicense, LicenseType } from "./track-license.entity";
+import { LicenseRequest, LicenseRequestStatus } from "./license-request.entity";
 import {
   CreateTrackLicenseDto,
-  UpdateTrackLicenseDto,
   CreateLicenseRequestDto,
   RespondToLicenseRequestDto,
-} from './dto/licensing.dto';
+} from "./licensing.dto";
 import { LicensingMailService } from './licensing-mail.service';
+import { NotificationsService } from "@/notifications/notifications.service";
+import { Track } from "@/tracks/entities/track.entity";
 
 @Injectable()
 export class LicensingService {
   constructor(
     @InjectRepository(TrackLicense)
     private readonly trackLicenseRepo: Repository<TrackLicense>,
+    @InjectRepository(Track)
+    private readonly trackRepo: Repository<Track>,
     @InjectRepository(LicenseRequest)
     private readonly licenseRequestRepo: Repository<LicenseRequest>,
     private readonly mailService: LicensingMailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ── Track License ──────────────────────────────────────────────────────────
@@ -36,6 +37,15 @@ export class LicensingService {
     dto: CreateTrackLicenseDto,
     artistId: string,
   ): Promise<TrackLicense> {
+    const track = await this.trackRepo.findOne({
+      where: { id: trackId, artistId },
+    });
+    if (!track) {
+      throw new ForbiddenException(
+        "You do not have permission to manage this track's license.",
+      );
+    }
+
     let license = await this.trackLicenseRepo.findOne({ where: { trackId } });
 
     if (license) {
@@ -56,7 +66,9 @@ export class LicensingService {
   }
 
   async assignDefaultLicense(trackId: string): Promise<TrackLicense> {
-    const existing = await this.trackLicenseRepo.findOne({ where: { trackId } });
+    const existing = await this.trackLicenseRepo.findOne({
+      where: { trackId },
+    });
     if (existing) return existing;
 
     const license = this.trackLicenseRepo.create({
@@ -86,7 +98,7 @@ export class LicensingService {
 
     if (existing) {
       throw new BadRequestException(
-        'You already have a pending request for this track.',
+        "You already have a pending request for this track.",
       );
     }
 
@@ -97,10 +109,25 @@ export class LicensingService {
     });
     const saved = await this.licenseRequestRepo.save(request);
 
+    const track = await this.trackRepo.findOne({
+      where: {
+        id: dto.trackId,
+      },
+      select: ["artistId"],
+    });
+
+    await this.notificationsService.create({
+      userId: track.artistId,
+      type: "LICENSE_REQUEST",
+      title: "New License Request",
+      message: `A user has requested a license for your track.`,
+      data: { requestId: saved.id, trackId: saved.trackId },
+    });
+
     // Notify artist (fire-and-forget)
     this.mailService
       .notifyArtistOfNewRequest(saved)
-      .catch((err) => console.error('Mail error:', err));
+      .catch((err) => console.error("Mail error:", err));
 
     return saved;
   }
@@ -111,9 +138,9 @@ export class LicensingService {
   ): Promise<LicenseRequest[]> {
     if (!trackIds.length) return [];
     return this.licenseRequestRepo
-      .createQueryBuilder('lr')
-      .where('lr.trackId IN (:...trackIds)', { trackIds })
-      .orderBy('lr.createdAt', 'DESC')
+      .createQueryBuilder("lr")
+      .where("lr.trackId IN (:...trackIds)", { trackIds })
+      .orderBy("lr.createdAt", "DESC")
       .getMany();
   }
 
@@ -127,16 +154,16 @@ export class LicensingService {
       where: { id: requestId },
     });
 
-    if (!request) throw new NotFoundException('License request not found.');
+    if (!request) throw new NotFoundException("License request not found.");
 
     if (!artistTrackIds.includes(request.trackId)) {
       throw new ForbiddenException(
-        'You are not authorized to respond to this request.',
+        "You are not authorized to respond to this request.",
       );
     }
 
     if (request.status !== LicenseRequestStatus.PENDING) {
-      throw new BadRequestException('Request has already been responded to.');
+      throw new BadRequestException("Request has already been responded to.");
     }
 
     request.status = dto.status;
@@ -145,10 +172,18 @@ export class LicensingService {
 
     const saved = await this.licenseRequestRepo.save(request);
 
+    await this.notificationsService.create({
+      userId: request.requesterId,
+      type: "LICENSE_RESPONSE",
+      title: `License Request ${dto.status.toUpperCase()}`,
+      message: `Your request for track ${request.trackId} has been ${dto.status}.`,
+      data: { requestId: saved.id, status: dto.status },
+    });
+
     // Notify requester
     this.mailService
       .notifyRequesterOfResponse(saved)
-      .catch((err) => console.error('Mail error:', err));
+      .catch((err) => console.error("Mail error:", err));
 
     return saved;
   }

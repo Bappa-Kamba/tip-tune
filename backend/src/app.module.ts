@@ -25,24 +25,25 @@ import { CommentsModule } from './comments/comments.module';
 import { CollaborationModule } from './collaboration/collaboration.module';
 import { VerificationModule } from './verification/verification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { LicensingModule } from "./track-listening-right-management/licensing.module";
 
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ".env",
     }),
     TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
+      type: "postgres",
+      host: process.env.DB_HOST || "localhost",
       port: parseInt(process.env.DB_PORT) || 5432,
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_NAME || 'tiptune',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      username: process.env.DB_USERNAME || "postgres",
+      password: process.env.DB_PASSWORD || "password",
+      database: process.env.DB_NAME || "tiptune",
+      entities: [__dirname + "/**/*.entity{.ts,.js}"],
       synchronize: false, // Use migrations instead
-      logging: process.env.NODE_ENV === 'development',
+      logging: process.env.NODE_ENV === "development",
     }),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot({ global: true }),
@@ -68,8 +69,9 @@ import { AnalyticsModule } from './analytics/analytics.module';
     CollaborationModule,
     VerificationModule,
     AnalyticsModule,
+    LicensingModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

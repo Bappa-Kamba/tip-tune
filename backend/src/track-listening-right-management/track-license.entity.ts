@@ -1,3 +1,4 @@
+import { Track } from "@/tracks/entities/track.entity";
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -7,25 +8,30 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
-} from 'typeorm';
+  OneToOne,
+} from "typeorm";
 
 export enum LicenseType {
-  ALL_RIGHTS_RESERVED = 'all_rights_reserved',
-  CREATIVE_COMMONS = 'creative_commons',
-  COMMERCIAL = 'commercial',
-  SYNC = 'sync',
+  ALL_RIGHTS_RESERVED = "all_rights_reserved",
+  CREATIVE_COMMONS = "creative_commons",
+  COMMERCIAL = "commercial",
+  SYNC = "sync",
 }
 
-@Entity('track_licenses')
+@Entity("track_licenses")
 export class TrackLicense {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: 'track_id' })
+  @Column({ name: "track_id" })
   trackId: string;
 
+  @OneToOne(() => Track, (track) => track.id, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "trackId" })
+  track: Track;
+
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: LicenseType,
     default: LicenseType.ALL_RIGHTS_RESERVED,
   })
@@ -46,7 +52,7 @@ export class TrackLicense {
   @Column({ nullable: true })
   licenseUrl: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   customTerms: string;
 
   @CreateDateColumn()
