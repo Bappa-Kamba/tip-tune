@@ -120,13 +120,15 @@ export class LicensingService {
 
 
     if (track.artistId) {
-      await this.notificationsService.create({
-        userId: track.artistId,
-        type: "LICENSE_REQUEST",
-        title: "New License Request",
-        message: `A user has requested a license for your track.`,
-        data: { requestId: saved.id, trackId: saved.trackId },
-      });
+      this.notificationsService
+        .create({
+          userId: track.artistId,
+          type: "LICENSE_REQUEST",
+          title: "New License Request",
+          message: `A user has requested a license for your track.`,
+          data: { requestId: saved.id, trackId: saved.trackId },
+        })
+        .catch((err) => console.error("Notification error:", err));
     }
 
     // Notify artist (fire-and-forget)
@@ -177,13 +179,15 @@ export class LicensingService {
 
     const saved = await this.licenseRequestRepo.save(request);
 
-    await this.notificationsService.create({
-      userId: request.requesterId,
-      type: "LICENSE_RESPONSE",
-      title: `License Request ${dto.status.toUpperCase()}`,
-      message: `Your request for track ${request.trackId} has been ${dto.status}.`,
-      data: { requestId: saved.id, status: dto.status },
-    });
+    this.notificationsService
+      .create({
+        userId: request.requesterId,
+        type: "LICENSE_RESPONSE",
+        title: `License Request ${dto.status.toUpperCase()}`,
+        message: `Your request for track ${request.trackId} has been ${dto.status}.`,
+        data: { requestId: saved.id, status: dto.status },
+      })
+      .catch((err) => console.error("Notification error:", err));
 
     // Notify requester
     this.mailService

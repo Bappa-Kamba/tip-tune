@@ -60,5 +60,7 @@ export class CreateLicensingTables1710000000000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE "license_requests"`);
     await queryRunner.query(`DROP TABLE "track_licenses"`);
+    await queryRunner.query(`DROP TYPE "license_request_status_enum"`);
+    await queryRunner.query(`DROP TYPE "license_type_enum"`);
   }
 }
