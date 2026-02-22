@@ -16,7 +16,6 @@ import { ModerationModule } from "@/moderation/moderation.module";
     StellarModule,
     UsersModule,
     NotificationsModule,
-    NotificationsModule,
     forwardRef(() => ActivitiesModule),
     GoalsModule,
     ModerationModule,

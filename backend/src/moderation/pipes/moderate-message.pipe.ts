@@ -9,7 +9,7 @@ import {
 export class ModerateMessagePipe implements PipeTransform {
   transform(value: any, metadata: ArgumentMetadata) {
     // We only care about the 'message' field in the incoming DTO
-    if (typeof value === "object" && value.message) {
+    if (value && typeof value === "object" && value.message) {
       let msg = value.message as string;
 
       // 1. Basic Sanitization

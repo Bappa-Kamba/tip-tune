@@ -143,9 +143,7 @@ export class TipsService {
       // We save the tip for financial records but hide the message
       savedTip.message = "[Message blocked by moderation]";
       await this.tipRepository.save(savedTip);
-    }
-
-    if (moderation.result !== ModerationResult.FLAGGED) {
+    } else if (moderation.result !== ModerationResult.FLAGGED) {
       // 5. Emit event
       this.eventEmitter.emit(
         "tip.verified",
@@ -157,7 +155,7 @@ export class TipsService {
         userId: artistId,
         type: NotificationType.TIP_RECEIVED,
         title: "New Tip Received!",
-        data: { tipId: savedTip.id, amount, assetCode },
+        data: { tipId: savedTip.id, amount: savedTip.amount, assetCode },
         message:
           moderation.filteredMessage ||
           message ||
@@ -274,7 +272,7 @@ export class TipsService {
       .addSelect("SUM(tip.amount)", "totalAmount")
       .addSelect("SUM(tip.usdValue)", "totalUsdValue")
       .addSelect("AVG(tip.amount)", "averageTip")
-      .where("tip.toArtistId = :artistId", { artistId })
+      .where("tip.artistId = :artistId", { artistId })
       .andWhere("tip.status = :status", { status: TipStatus.VERIFIED })
       .getRawOne();
 

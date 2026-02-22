@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
@@ -11,6 +16,7 @@ import {
 } from "./entities/moderation-log.entity";
 import { Tip } from "../tips/entities/tip.entity";
 import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "@/notifications/notification.entity";
 
 @Injectable()
 export class ModerationService {
@@ -30,6 +36,11 @@ export class ModerationService {
     addedById: string,
     artistId?: string,
   ) {
+    if (!Object.values(KeywordSeverity).includes(severity as KeywordSeverity)) {
+      throw new BadRequestException(
+        `Invalid severity: ${severity}. Must be one of: ${Object.values(KeywordSeverity).join(", ")}`,
+      );
+    }
     const newKeyword = this.keywordRepo.create({
       keyword: keyword.toLowerCase().trim(),
       severity: severity as KeywordSeverity,
@@ -60,6 +71,9 @@ export class ModerationService {
       relations: ["tip"],
     });
     if (!log) throw new NotFoundException("Moderation log entry not found");
+    if (log.wasManuallyReviewed) {
+      throw new ConflictException("This log entry has already been reviewed");
+    }
 
     log.wasManuallyReviewed = true;
     log.reviewedById = adminId;
@@ -69,7 +83,7 @@ export class ModerationService {
       // Now that it's approved, release the notification to the artist
       await this.notificationsService.create({
         userId: log.tip.artistId,
-        type: "TIP_RECEIVED",
+        type: NotificationType.TIP_RECEIVED,
         title: "New Tip Received (Moderated)",
         message: log.originalMessage,
         data: { tipId: log.tipId },

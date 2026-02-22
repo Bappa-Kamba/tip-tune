@@ -37,7 +37,16 @@ export class MessageModerationLog {
   @Column({ nullable: true })
   filterReason: string;
 
-  @Column({ type: "decimal", precision: 3, scale: 2, default: 1.0 })
+  @Column({
+    type: "decimal",
+    precision: 3,
+    scale: 2,
+    default: 1.0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseFloat(value),
+    },
+  })
   confidenceScore: number;
 
   @Column({ default: false })
@@ -47,6 +56,7 @@ export class MessageModerationLog {
   reviewedById: string;
 
   @ManyToOne(() => User)
+  @JoinColumn({ name: "reviewedById" })
   reviewedBy: User;
 
   @CreateDateColumn()

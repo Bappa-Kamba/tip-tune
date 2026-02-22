@@ -50,14 +50,16 @@ export class MessageFilterService {
     });
 
     for (const kw of keywords) {
-      const regex = new RegExp(`\\b${kw.keyword}\\b`, "gi");
+      const regex = new RegExp(`\\b${this.escapeRegex(kw.keyword)}\\b`, "gi");
       if (regex.test(message)) {
         if (kw.severity === KeywordSeverity.HIGH) {
           currentResult = ModerationResult.BLOCKED;
           reason = `High-severity keyword: ${kw.keyword}`;
           break; // Stop immediately for high severity
         } else {
-          currentResult = ModerationResult.FILTERED;
+          if (currentResult !== ModerationResult.FLAGGED) {
+            currentResult = ModerationResult.FILTERED;
+          }
           filteredMessage = filteredMessage.replace(regex, "***");
           reason = reason || "Keyword filtering applied";
         }
@@ -74,5 +76,9 @@ export class MessageFilterService {
     });
 
     return { result: currentResult, filteredMessage };
+  }
+
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 }

@@ -3,19 +3,20 @@ import {
   Post,
   Get,
   Put,
-  Delete,
   Body,
   Param,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { UserRole } from "../users/entities/user.entity";
 import { ModerationService } from "./moderation.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { AddKeywordDto, ReviewActionDto } from "./dtos/keyword.dto";
 
-@Controller("api/moderation")
+@Controller("moderation")
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ModerationController {
   constructor(private readonly moderationService: ModerationService) {}
@@ -36,10 +37,8 @@ export class ModerationController {
 
   // Artist: Manage Personal Keywords
   @Post("artist/keywords")
-  async addArtistKeyword(
-    @Body() data: { keyword: string; severity: string },
-    @Request() req,
-  ) {
+  @Roles(UserRole.ARTIST)
+  async addArtistKeyword(@Body() data: AddKeywordDto, @Request() req) {
     return this.moderationService.addKeyword(
       data.keyword,
       data.severity,
@@ -58,8 +57,8 @@ export class ModerationController {
   @Put("queue/:logId/review")
   @Roles(UserRole.ADMIN)
   async reviewMessage(
-    @Param("logId") logId: string,
-    @Body() data: { action: "approve" | "block" },
+    @Param("logId", ParseUUIDPipe) logId: string,
+    @Body() data: ReviewActionDto,
     @Request() req,
   ) {
     return this.moderationService.resolveFlaggedMessage(
@@ -70,6 +69,7 @@ export class ModerationController {
   }
 
   @Get("stats")
+  @Roles(UserRole.ADMIN)
   async getStats() {
     return this.moderationService.getModerationStats();
   }

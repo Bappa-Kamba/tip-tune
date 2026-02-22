@@ -31,7 +31,7 @@ export class BlockedKeyword {
   severity: KeywordSeverity;
 
   @Column({ type: "uuid", nullable: true })
-  artistId: string; // Null if global (admin-added)
+  artistId: string | null; // Null if global (admin-added)
 
   @Column({ type: "uuid" })
   addedById: string;

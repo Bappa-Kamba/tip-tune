@@ -2,12 +2,15 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class CreateModerationTables1710100000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // 1. Create Blocked Keywords Table
+    await queryRunner.query(`
+      CREATE TYPE "severity_enum" AS ENUM ('low', 'medium', 'high')
+    `);
+    // Create Blocked Keywords Table
     await queryRunner.query(`
       CREATE TABLE "blocked_keywords" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "keyword" character varying NOT NULL,
-        "severity" character varying NOT NULL DEFAULT 'medium',
+        "severity" severity_enum NOT NULL DEFAULT 'medium',
         "artistId" uuid,
         "addedById" uuid NOT NULL,
         "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
@@ -20,7 +23,7 @@ export class CreateModerationTables1710100000000 implements MigrationInterface {
       `CREATE INDEX "IDX_keyword" ON "blocked_keywords" ("keyword")`,
     );
 
-    // 2. Create Moderation Logs Table
+    // Create Moderation Logs Table
     await queryRunner.query(`
       CREATE TABLE "message_moderation_logs" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
