@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ActivitiesModule } from '../activities/activities.module';
 import { GoalsModule } from '../goals/goals.module';
+import { ModerationModule } from "@/moderation/moderation.module";
 
 @Module({
   imports: [
@@ -18,9 +19,10 @@ import { GoalsModule } from '../goals/goals.module';
     NotificationsModule,
     forwardRef(() => ActivitiesModule),
     GoalsModule,
+    ModerationModule,
   ],
   controllers: [TipsController],
   providers: [TipsService],
   exports: [TipsService],
 })
-export class TipsModule { }
+export class TipsModule {}

@@ -19,6 +19,8 @@ import { ActivitiesService } from '../activities/activities.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TipVerifiedEvent } from './events/tip-verified.event';
 import { NotificationType } from '../notifications/notification.entity';
+import { ModerationResult } from "@/moderation/entities/moderation-log.entity";
+import { MessageFilterService } from "@/moderation/message-filter.service";
 
 @Injectable()
 export class TipsService {
@@ -33,7 +35,8 @@ export class TipsService {
     @Inject(forwardRef(() => ActivitiesService))
     private readonly activitiesService: ActivitiesService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+    private readonly messageFilterService: MessageFilterService,
+  ) {}
 
   async create(userId: string, createTipDto: CreateTipDto): Promise<Tip> {
     const { artistId, trackId, stellarTxHash, message } = createTipDto;
@@ -44,12 +47,14 @@ export class TipsService {
     });
 
     if (existingTip) {
-      throw new ConflictException('Tip with this Stellar transaction hash already exists');
+      throw new ConflictException(
+        "Tip with this Stellar transaction hash already exists",
+      );
     }
 
     // 2. Validate users
     if (userId === artistId) {
-      throw new BadRequestException('Cannot tip yourself');
+      throw new BadRequestException("Cannot tip yourself");
     }
 
     // Fetch artist to get wallet address
@@ -58,42 +63,51 @@ export class TipsService {
       artist = await this.usersService.findOne(artistId);
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw new BadRequestException('Artist not found');
+        throw new BadRequestException("Artist not found");
       }
       throw error;
     }
 
     if (!artist.walletAddress) {
-      throw new BadRequestException('Artist does not have a wallet address configured');
+      throw new BadRequestException(
+        "Artist does not have a wallet address configured",
+      );
     }
 
     // 3. Verify transaction on Stellar
     let txDetails;
     try {
-      txDetails = await this.stellarService.getTransactionDetails(stellarTxHash);
+      txDetails =
+        await this.stellarService.getTransactionDetails(stellarTxHash);
     } catch (e) {
-      throw new BadRequestException(`Invalid Stellar transaction hash: ${e.message}`);
+      throw new BadRequestException(
+        `Invalid Stellar transaction hash: ${e.message}`,
+      );
     }
 
     if (!txDetails.successful) {
-      throw new BadRequestException('Stellar transaction failed on-chain');
+      throw new BadRequestException("Stellar transaction failed on-chain");
     }
 
     const operations = await txDetails.operations();
     // Find payment to artist
-    const paymentOp: any = operations.records.find(
-      (op: any) => {
-        const isPayment = op.type === 'payment' || op.type === 'path_payment_strict_send' || op.type === 'path_payment_strict_receive';
-        return isPayment && op.to === artist.walletAddress;
-      }
-    );
+    const paymentOp: any = operations.records.find((op: any) => {
+      const isPayment =
+        op.type === "payment" ||
+        op.type === "path_payment_strict_send" ||
+        op.type === "path_payment_strict_receive";
+      return isPayment && op.to === artist.walletAddress;
+    });
 
     if (!paymentOp) {
-      throw new BadRequestException('Transaction does not contain a valid payment to the artist');
+      throw new BadRequestException(
+        "Transaction does not contain a valid payment to the artist",
+      );
     }
 
     const amount = paymentOp.amount;
-    const assetCode = paymentOp.asset_type === 'native' ? 'XLM' : paymentOp.asset_code;
+    const assetCode =
+      paymentOp.asset_type === "native" ? "XLM" : paymentOp.asset_code;
     const assetIssuer = paymentOp.asset_issuer;
     const assetType = paymentOp.asset_type;
 
@@ -106,7 +120,7 @@ export class TipsService {
       artistId,
       trackId,
       stellarTxHash,
-      senderAddress: senderAddress || 'anonymous', // Or handle if wallet missing
+      senderAddress: senderAddress || "anonymous", // Or handle if wallet missing
       receiverAddress,
       amount: parseFloat(amount),
       assetCode,
@@ -120,17 +134,36 @@ export class TipsService {
 
     const savedTip = await this.tipRepository.save(newTip);
 
-    // 5. Emit event
-    this.eventEmitter.emit('tip.verified', new TipVerifiedEvent(savedTip, userId));
+    const moderation = await this.messageFilterService.processMessage(
+      savedTip,
+      message,
+    );
 
-    // 6. Notify artist
-    await this.notificationsService.create({
-      userId: artistId,
-      type: NotificationType.TIP_RECEIVED,
-      title: 'New Tip Received!',
-      message: `You received a tip of ${amount} ${assetCode} from ${user.username || 'a fan'}`,
-      data: { tipId: savedTip.id, amount, assetCode },
-    });
+    if (moderation.result === ModerationResult.BLOCKED) {
+      // We save the tip for financial records but hide the message
+      savedTip.message = "[Message blocked by moderation]";
+      await this.tipRepository.save(savedTip);
+    }
+
+    if (moderation.result !== ModerationResult.FLAGGED) {
+      // 5. Emit event
+      this.eventEmitter.emit(
+        "tip.verified",
+        new TipVerifiedEvent(savedTip, userId),
+      );
+
+      // 6. Notify artist
+      await this.notificationsService.create({
+        userId: artistId,
+        type: NotificationType.TIP_RECEIVED,
+        title: "New Tip Received!",
+        data: { tipId: savedTip.id, amount, assetCode },
+        message:
+          moderation.filteredMessage ||
+          message ||
+          `You received a tip of ${amount} ${assetCode} from ${user.username || "a fan"}`,
+      });
+    }
 
     return savedTip;
   }
@@ -138,7 +171,7 @@ export class TipsService {
   async findOne(id: string): Promise<Tip> {
     const tip = await this.tipRepository.findOne({
       where: { id },
-      relations: ['fromUser', 'artist', 'track'],
+      relations: ["fromUser", "artist", "track"],
     });
 
     if (!tip) {
@@ -156,16 +189,16 @@ export class TipsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.tipRepository
-      .createQueryBuilder('tip')
-      .leftJoinAndSelect('tip.artist', 'artist')
-      .leftJoinAndSelect('tip.track', 'track')
-      .where('tip.fromUserId = :userId', { userId })
-      .orderBy('tip.createdAt', 'DESC')
+      .createQueryBuilder("tip")
+      .leftJoinAndSelect("tip.artist", "artist")
+      .leftJoinAndSelect("tip.track", "track")
+      .where("tip.fromUserId = :userId", { userId })
+      .orderBy("tip.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
     if (status) {
-      queryBuilder.andWhere('tip.status = :status', { status });
+      queryBuilder.andWhere("tip.status = :status", { status });
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
@@ -181,16 +214,16 @@ export class TipsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.tipRepository
-      .createQueryBuilder('tip')
-      .leftJoinAndSelect('tip.fromUser', 'user')
-      .leftJoinAndSelect('tip.track', 'track')
-      .where('tip.artistId = :artistId', { artistId })
-      .orderBy('tip.createdAt', 'DESC')
+      .createQueryBuilder("tip")
+      .leftJoinAndSelect("tip.fromUser", "user")
+      .leftJoinAndSelect("tip.track", "track")
+      .where("tip.artistId = :artistId", { artistId })
+      .orderBy("tip.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
     if (status) {
-      queryBuilder.andWhere('tip.status = :status', { status });
+      queryBuilder.andWhere("tip.status = :status", { status });
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
@@ -212,16 +245,16 @@ export class TipsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.tipRepository
-      .createQueryBuilder('tip')
-      .leftJoinAndSelect('tip.fromUser', 'user')
-      .leftJoinAndSelect('tip.artist', 'artist')
-      .where('tip.trackId = :trackId', { trackId })
-      .orderBy('tip.createdAt', 'DESC')
+      .createQueryBuilder("tip")
+      .leftJoinAndSelect("tip.fromUser", "user")
+      .leftJoinAndSelect("tip.artist", "artist")
+      .where("tip.trackId = :trackId", { trackId })
+      .orderBy("tip.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
     if (status) {
-      queryBuilder.andWhere('tip.status = :status', { status });
+      queryBuilder.andWhere("tip.status = :status", { status });
     }
 
     const [data, total] = await queryBuilder.getManyAndCount();
@@ -236,13 +269,13 @@ export class TipsService {
     averageTip: number;
   }> {
     const result = await this.tipRepository
-      .createQueryBuilder('tip')
-      .select('COUNT(*)', 'totalTips')
-      .addSelect('SUM(tip.amount)', 'totalAmount')
-      .addSelect('SUM(tip.usdValue)', 'totalUsdValue')
-      .addSelect('AVG(tip.amount)', 'averageTip')
-      .where('tip.toArtistId = :artistId', { artistId })
-      .andWhere('tip.status = :status', { status: TipStatus.VERIFIED })
+      .createQueryBuilder("tip")
+      .select("COUNT(*)", "totalTips")
+      .addSelect("SUM(tip.amount)", "totalAmount")
+      .addSelect("SUM(tip.usdValue)", "totalUsdValue")
+      .addSelect("AVG(tip.amount)", "averageTip")
+      .where("tip.toArtistId = :artistId", { artistId })
+      .andWhere("tip.status = :status", { status: TipStatus.VERIFIED })
       .getRawOne();
 
     return {

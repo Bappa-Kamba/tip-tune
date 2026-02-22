@@ -27,6 +27,7 @@ import { VerificationModule } from './verification/verification.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { LicensingModule } from "./track-listening-right-management/licensing.module";
 import { AdminModule } from './admin/admin.module';
+import { ModerationModule } from "./moderation/moderation.module";
 
 
 @Module({
@@ -72,6 +73,7 @@ import { AdminModule } from './admin/admin.module';
     AnalyticsModule,
     LicensingModule,
     AdminModule,
+    ModerationModule,
   ],
   controllers: [],
   providers: [],
